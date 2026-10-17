@@ -29,6 +29,12 @@ Installing the original Titan Panel ZIP afterward replaces the modified Gold Tra
 
 ![Built-in Gold Tracker tooltip with persistent server-reset gains](docs/screenshots/gold-tracking-tooltip.png)
 
+## Server-wide totals and compatibility
+
+The built-in Gold Tracker totals and character list include both Alliance and Horde on the current realm. Existing faction-tagged gold records stay compatible. Everfresh reset tracking remains integrated into the same tooltip and menu.
+
+Keep both `TitanGoldTrackerResetDB` in the manifest's SavedVariables line and `ServerResetGold.lua` after `TitanGoldTracker.xml` in the load list when updating Gold Tracker. Replacing this manifest with an unmodified version disables Everfresh tracking and can erase its saved baselines after logout. Reinstall this package after updating Titan Panel; previously erased baselines cannot be recovered by reinstalling.
+
 ## Tracking and reset
 
 The tooltip keeps the original gold/session information and adds tracking start date, starting gold, character net gain, account net gain, and number of tracked characters.

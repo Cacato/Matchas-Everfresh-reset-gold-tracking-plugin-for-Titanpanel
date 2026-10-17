@@ -2,7 +2,7 @@
 -- * Titan Gold Tracker.lua - VERSION 2.3.2
 -- **************************************************************************
 -- * by Poena @ Area 52
--- * This mod will display all the gold held by toons in the same faction on 
+-- * This mod will display all the gold held by toons in both factions on 
 -- * on the same server.  I have also incorporated the Titan Money functionality
 -- * of displaying money session stats.
 -- *
@@ -63,6 +63,13 @@ local LB = LibStub("AceLocale-3.0"):GetLocale("Titan_GoldTracker", true)
 local TitanGoldTracker = LibStub("AceAddon-3.0"):NewAddon("TitanGoldTracker", "AceHook-3.0", "AceTimer-3.0")
 local GoldTrackerTimer = nil;
 local _G = getfenv(0);
+-- Saved keys stay character_realm::faction so existing data remains compatible.
+-- Compare the realm separately when displaying balances from both factions.
+local function TitanGoldTracker_IsCurrentRealm(charserver, realm)
+     local savedRealm, faction = string.match(charserver, "^(.*)::([^:]+)$");
+     return savedRealm == realm and (faction == "Alliance" or faction == "Horde");
+end
+
 -- ******************************** Functions *******************************
 
 -- **************************************************************************
@@ -153,10 +160,10 @@ end
 -- DESC: Gets our tool-tip text, what appears when we hover over our item on the Titan bar.
 -- *******************************************************************************************
 function TitanPanelGoldTrackerButton_GetTooltipText()
-     -- the following code will parse the database and then display all members from the same faction/server
+     -- the following code will parse the database and then display all members from both factions on the current server
      -- to the user
           
-     local server = GetCVar("realmName").."::"..UnitFactionGroup("Player");
+     local server = GetCVar("realmName");
      GoldArray[GOLDTRACKER_INDEX] = TitanPanelGoldTracker_ParseArray(GoldArray[GOLDTRACKER_INDEX]);
     local currentMoneyRichText = ""; -- initialize the variable to hold the array
 
@@ -165,9 +172,9 @@ function TitanPanelGoldTrackerButton_GetTooltipText()
 
      local GoldArraySorted = {};
      for index, money in pairs(GoldArray) do
-          local character, charserver = string.match(index, '(.*)_(.*)');
+          local character, charserver = string.match(index, '^(.-)_(.*)$');
           if (character) then
-               if (charserver == server) then
+               if (TitanGoldTracker_IsCurrentRealm(charserver, server)) then
                     table.insert(GoldArraySorted, index); -- insert all keys from hash into the array
                end
           end
@@ -180,9 +187,9 @@ function TitanPanelGoldTrackerButton_GetTooltipText()
      end
      
      for i = 1, getn(GoldArraySorted) do 
-          local character, charserver = string.match(GoldArraySorted[i], '(.*)_(.*)');
+          local character, charserver = string.match(GoldArraySorted[i], '^(.-)_(.*)$');
           if (character) then
-               if (charserver == server) then
+               if (TitanGoldTracker_IsCurrentRealm(charserver, server)) then
                     if (mod(GoldArray[GoldArraySorted[i]],10) == 0) then
                          currentMoneyRichText = currentMoneyRichText.."\n"..character.."\t"..TitanUtils_GetHighlightText(format(L["TITAN_MONEY_FORMAT"], TitanPanelGoldTracker_BreakMoney(floor(GoldArray[GoldArraySorted[i]]/10))));                    
                     end
@@ -222,7 +229,7 @@ function TitanPanelGoldTrackerButton_GetTooltipText()
           end
      
      
-     local final_tooltip = LB["TITAN_GOLDTRACKER_TOOLTIPTEXT"].." : "..GetCVar("realmName").." : "..select(2,UnitFactionGroup("Player"));
+     local final_tooltip = LB["TITAN_GOLDTRACKER_TOOLTIPTEXT"].." : "..GetCVar("realmName").." : "..LB["TITAN_GOLDTRACKER_FACTION_PLAYER_ALLY"].." / "..LB["TITAN_GOLDTRACKER_FACTION_PLAYER_HORDE"];
      if (UnitFactionGroup("Player")=="Alliance") then
           GOLDTRACKER_COLOR = TITAN_GOLDTRACKER_GREEN;
      else
@@ -239,7 +246,7 @@ end
 -- *******************************************************************************************
 function TitanPanelGoldTrackerButton_FindGold()
      
-     local server = GetCVar("realmName").."::"..UnitFactionGroup("Player");
+     local server = GetCVar("realmName");
 
      GoldArray[GOLDTRACKER_INDEX] = TitanPanelGoldTracker_ParseArray(GoldArray[GOLDTRACKER_INDEX]);
      
@@ -247,9 +254,9 @@ function TitanPanelGoldTrackerButton_FindGold()
      
      if (GoldArray["VIEWALL"]) then
           for index, money in pairs(GoldArray) do
-               local character, charserver = string.match(index, '(.*)_(.*)');
+               local character, charserver = string.match(index, '^(.-)_(.*)$');
                if (character) then
-                    if (charserver == server) then
+                    if (TitanGoldTracker_IsCurrentRealm(charserver, server)) then
                          if (mod(money,10)==0) then
                               ttlgold = ttlgold + floor(money / 10);
                          end
@@ -269,14 +276,14 @@ end
 -- *******************************************************************************************
 function TitanPanelGoldTrackerButton_TotalGold()
      
-     local server = GetCVar("realmName").."::"..UnitFactionGroup("Player");
+     local server = GetCVar("realmName");
      GoldArray[GOLDTRACKER_INDEX] = TitanPanelGoldTracker_ParseArray(GoldArray[GOLDTRACKER_INDEX]);
     local ttlgold = 0;
      
      for index, money in pairs(GoldArray) do
-          local character, charserver = string.match(index, '(.*)_(.*)');
+          local character, charserver = string.match(index, '^(.-)_(.*)$');
           if (character) then
-               if (charserver == server) then
+               if (TitanGoldTracker_IsCurrentRealm(charserver, server)) then
                     if (mod(money,10)==0) then
                          ttlgold = ttlgold + floor(money / 10);
                     end
@@ -470,7 +477,7 @@ function TitanPanelGoldTrackerButton_Initialize_Array(self)
      if (GoldArray["VERSION2"] == nil) then
           GoldArray["VERSION2"] = true;
           for index, money in pairs(GoldArray) do
-               local character, charserver = string.match(index, '(.*)_(.*)');
+               local character, charserver = string.match(index, '^(.-)_(.*)$');
                if (character) then
                          money = money * 10;
                          GoldArray[index] = money;
@@ -570,12 +577,12 @@ function TitanPanelGoldTrackerShowToon_Toggle()
      if (mod(GoldArray[GOLDTRACKER_INDEX],10)==0) then
           local newvalue = (floor(GoldArray[GOLDTRACKER_INDEX],10)*10)+1;
           GoldArray[GOLDTRACKER_INDEX] = newvalue;
-          local character, charserver = string.match(GOLDTRACKER_INDEX, '(.*)_(.*)');
+          local character, charserver = string.match(GOLDTRACKER_INDEX, '^(.-)_(.*)$');
           DEFAULT_CHAT_FRAME:AddMessage("Titan Gold Tracker: "..character.." "..LB["TITAN_GOLDTRACKER_STATUS_PLAYER_HIDE"], 1.0, 0.0, 1.0 );
      else
           local newvalue = floor(GoldArray[GOLDTRACKER_INDEX],10)*10;
           GoldArray[GOLDTRACKER_INDEX] = newvalue;
-          local character, charserver = string.match(GOLDTRACKER_INDEX, '(.*)_(.*)');
+          local character, charserver = string.match(GOLDTRACKER_INDEX, '^(.-)_(.*)$');
           DEFAULT_CHAT_FRAME:AddMessage("Titan Gold Tracker: "..character.." "..LB["TITAN_GOLDTRACKER_STATUS_PLAYER_SHOW"], 1.0, 0.0, 1.0 );
      end
 
